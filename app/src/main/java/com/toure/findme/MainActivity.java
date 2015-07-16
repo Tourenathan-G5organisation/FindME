@@ -4,16 +4,19 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationServices;
 
 
@@ -33,6 +36,9 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
     private boolean mResolvingError = false;
 
     private static final String STATE_RESOLVING_ERROR = "resolving_error";
+
+    //Holds the device location
+    Location mLastLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,12 +92,33 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
     public void onConnected(Bundle bundle) {
         Log.d(LOG_TAG, "the API Client is connected");
 
+        LocationAvailability la = LocationServices.FusedLocationApi.getLocationAvailability(mGoogleApiClient);
+        Log.d(LOG_TAG, Boolean.toString(la.isLocationAvailable()));
+        Log.d(LOG_TAG, la.toString());
+
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
+        if (mLastLocation != null) {
+            //Getting and displaying the latitude
+            TextView lat = (TextView) findViewById(R.id.latitude);
+            lat.setText(Double.toString(mLastLocation.getLatitude()));
+
+            //Getting and displaying the longitude
+            TextView lon = (TextView) findViewById(R.id.longitude);
+            lon.setText(Double.toString(mLastLocation.getLongitude()));
+
+            //Getting and displaying the Altitude
+            TextView alt = (TextView) findViewById(R.id.altitude);
+            alt.setText(Double.toString(mLastLocation.getAltitude()));
+
+        }
     }
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.d(LOG_TAG, " the API Client connection failed");
 
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mResolvingError) {
             // Already attempting to resolve an error.
             return;
