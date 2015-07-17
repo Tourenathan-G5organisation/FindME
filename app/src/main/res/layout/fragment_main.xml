@@ -36,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="11112"
+            android:text="00"
             android:id="@+id/latitude"
             android:layout_weight=".5"
             android:gravity="center" />
@@ -62,7 +62,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="111"
+            android:text="00"
             android:id="@+id/longitude"
             android:layout_weight=".5"
             android:gravity="center" />
@@ -87,12 +87,35 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="11"
+            android:text="00"
             android:layout_weight=".5"
             android:id="@+id/altitude"
             android:gravity="center"/>
 
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="22dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="@string/time"
+            android:layout_weight=".5"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="00"
+            android:layout_weight=".5"
+            android:id="@+id/time"
+            android:gravity="center"/>
+
+    </LinearLayout>
 
 </LinearLayout>

@@ -11,16 +11,21 @@ import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationAvailability;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
+import java.text.DateFormat;
+import java.util.Date;
 
-public class MainActivity extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
+
+public class MainActivity extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
 
@@ -40,10 +45,21 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
     //Holds the device location
     Location mLastLocation;
 
+    //Location update request
+    LocationRequest mLocationRequest;
+
+    //Keep record of the last time the location was available
+    String mLastUpdateTime;
+
+    MainActivityFragment MF;
+
+    int cnt = 0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+
+
 
         //Get the state of error resolving tracker
         mResolvingError = (savedInstanceState != null
@@ -99,19 +115,27 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
 
         if (mLastLocation != null) {
-            //Getting and displaying the latitude
-            TextView lat = (TextView) findViewById(R.id.latitude);
-            lat.setText(Double.toString(mLastLocation.getLatitude()));
+            try{
+                MF = (MainActivityFragment) getSupportFragmentManager().findFragmentById(R.id.locationFragment);
 
-            //Getting and displaying the longitude
-            TextView lon = (TextView) findViewById(R.id.longitude);
-            lon.setText(Double.toString(mLastLocation.getLongitude()));
+                MF.setLocation(mLastLocation);
+                MF.updateUI();
+                Log.d(LOG_TAG, "new location:  " + Integer.toString(++cnt) + " times");
 
-            //Getting and displaying the Altitude
-            TextView alt = (TextView) findViewById(R.id.altitude);
-            alt.setText(Double.toString(mLastLocation.getAltitude()));
+            }
+            catch(NullPointerException e){
+                Log.d(LOG_TAG, "Null pointer exception1:  " + e.getMessage()+
+                "frag: " + MF.toString());
+
+                e.getStackTrace();
+            }
+
 
         }
+        //Request for location updates
+
+        startLocationUpdates();
+
     }
 
     @Override
@@ -144,7 +168,7 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
 
     @Override
     public void onConnectionSuspended(int i) {
-        Log.d(LOG_TAG," API Client connection suspended");
+        Log.d(LOG_TAG, " API Client connection suspended");
         // The connection has been interrupted.
         // Disable any UI components that depend on Google APIs
         // until onConnected() is called.
@@ -155,6 +179,15 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
     protected void onResume() {
         super.onResume();
 
+        if (mGoogleApiClient.isConnected()) {
+            startLocationUpdates();
+        }
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
         //Check if the device has the Google play Service APK install
         //It's only if this is available that we can connect the API client
 
@@ -171,12 +204,13 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
             //Get the error dialog and prompt the user for solving the corresponding error
             GooglePlayServicesUtil.getErrorDialog(resultCode, this, REQUEST_RESOLVE_ERROR).show();
         }
+
     }
 
     @Override
     protected void onStop() {
         mGoogleApiClient.disconnect(); //disconnect the google play services before closing the app
-        Log.d(LOG_TAG," API Client disconnected");
+        Log.d(LOG_TAG, " API Client disconnected");
         super.onStop();
 
     }
@@ -238,6 +272,56 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
         outState.putBoolean(STATE_RESOLVING_ERROR, mResolvingError);
     }
 
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(10000);
+        mLocationRequest.setFastestInterval(5000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
 
+    protected void startLocationUpdates() {
+        createLocationRequest();
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        mLastLocation = location;
+        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+
+        try{
+            MF = (MainActivityFragment) getSupportFragmentManager().findFragmentById(R.id.locationFragment);
+
+            MF.setLocation(mLastLocation);
+            MF.updateUI();
+            Log.d(LOG_TAG, "new location:  " + Integer.toString(++cnt) + " times");
+        }
+        catch(NullPointerException e){
+            Log.d(LOG_TAG, "Null pointer exception2:  " + e.getMessage()+
+                    "frag: " + MF.toString());
+            e.getStackTrace();
+        }
 
     }
+
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLocationUpdates();
+    }
+
+    protected void stopLocationUpdates() {
+        if(mGoogleApiClient.isConnected()) {
+            LocationServices.FusedLocationApi.removeLocationUpdates(
+                    mGoogleApiClient, this);
+        }
+    }
+
+    //Getter method for the API Client
+    public GoogleApiClient getApiClient(){
+        return mGoogleApiClient;
+    }
+}

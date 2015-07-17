@@ -7,5 +7,8 @@
     <string name="latitude">Latitude:</string>
     <string name="longitude">Longitude:</string>
     <string name="altitude">Altitude:</string>
+    <string name="time">Time:</string>
+    <string name="title_activity_main_activity2">MainActivity2Activity</string>
+    <string name="hello_world">Hello world!</string>
 
 </resources>
