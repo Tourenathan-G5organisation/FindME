@@ -1,6 +1,7 @@
 package com.toure.findme;
 
 import android.app.Dialog;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -288,6 +289,15 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
         createLocationRequest();
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, mLocationRequest, this);
+
+        LocationUpdateReciever locReciever = new LocationUpdateReciever(MF);
+
+        Intent intent = new Intent(this, LocationService.class);
+
+        PendingIntent pi = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,
+                mLocationRequest, pi);
     }
 
     @Override

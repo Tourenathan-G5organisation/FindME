@@ -26,6 +26,11 @@
             android:enabled="true"
             android:exported="true" >
         </receiver>
+
+        <service
+            android:name=".LocationService"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>

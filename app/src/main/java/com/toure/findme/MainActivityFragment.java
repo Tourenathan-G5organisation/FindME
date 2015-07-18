@@ -1,5 +1,7 @@
 package com.toure.findme;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -118,5 +120,17 @@ public class MainActivityFragment extends Fragment {
             updateUI();
         }
 
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        SharedPreferences sp = getActivity().getSharedPreferences("location", Context.MODE_PRIVATE);
+        if(sp != null){
+            lat.setText(String.valueOf(sp.getFloat("Loclatitude", 00)));
+            lon.setText(String.valueOf(sp.getFloat("Loclongitude", 00)));
+            alt.setText(String.valueOf(sp.getFloat("Localtitude", 00)));
+            time.setText(String.valueOf(sp.getFloat("Loctime", 00)));
+        }
     }
 }
