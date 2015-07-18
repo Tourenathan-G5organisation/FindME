@@ -68,18 +68,21 @@ public class MainActivityFragment extends Fragment {
 //    }
 //
     public void updateUI() {
-        //Getting and displaying the latitude
-        lat.setText(Double.toString(mLastLocation.getLatitude()));
+        if(isVisible()){
+            //Getting and displaying the latitude
+            lat.setText(Double.toString(mLastLocation.getLatitude()));
 
-        //Getting and displaying the longitude
-        lon.setText(Double.toString(mLastLocation.getLongitude()));
+            //Getting and displaying the longitude
+            lon.setText(Double.toString(mLastLocation.getLongitude()));
 
-        //Getting and displaying the Altitude
-        alt.setText(Double.toString(mLastLocation.getAltitude()));
+            //Getting and displaying the Altitude
+            alt.setText(Double.toString(mLastLocation.getAltitude()));
 
-        //Get the current time and display
-        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        time.setText(mLastUpdateTime);
+            //Get the current time and display
+            mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+            time.setText(mLastUpdateTime);
+        }
+
     }
 
     public void setLocation(Location location) {

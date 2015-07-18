@@ -1,6 +1,7 @@
 package com.toure.findme;
 
 import android.app.Dialog;
+import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -22,6 +23,7 @@ import com.google.android.gms.location.LocationServices;
 
 import java.text.DateFormat;
 import java.util.Date;
+
 
 
 public class MainActivity extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks,
@@ -54,6 +56,9 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
     MainActivityFragment MF;
 
     int cnt = 0;
+
+    //Broadcast reciver for location change
+    BroadcastReceiver locRecievr;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
