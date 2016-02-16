@@ -9,7 +9,7 @@ import android.content.IntentSender;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,7 +27,7 @@ import java.util.Date;
 
 
 
-public class MainActivity extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks,
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
@@ -58,7 +58,7 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
 
     int cnt = 0;
 
-    //Broadcast reciver for location change
+    //Broadcast receiver for location change
     BroadcastReceiver locRecievr;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,7 +131,7 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
             }
             catch(NullPointerException e){
                 Log.d(LOG_TAG, "Null pointer exception1:  " + e.getMessage()+
-                "frag: " + MF.toString());
+                        "frag: " + MF.toString());
 
                 e.getStackTrace();
             }
@@ -184,6 +184,22 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
     @Override
     protected void onResume() {
         super.onResume();
+
+        int errorCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+
+
+        if(errorCode != ConnectionResult.SUCCESS){
+            Dialog errorDialog =  GooglePlayServicesUtil.getErrorDialog(errorCode, this, REQUEST_RESOLVE_ERROR,
+                    new DialogInterface.OnCancelListener() {
+                        @Override
+                        public void onCancel(DialogInterface dialog) {
+                            // Leave if services are unavailable
+                            finish();
+                        }
+                    });
+
+            errorDialog.show();
+        }
 
         if (mGoogleApiClient.isConnected()) {
             startLocationUpdates();
@@ -280,8 +296,8 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
 
     protected void createLocationRequest() {
         mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000);
-        mLocationRequest.setFastestInterval(5000);
+        mLocationRequest.setInterval(10000); // 10 secs
+        mLocationRequest.setFastestInterval(5000); // 5 secs
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
