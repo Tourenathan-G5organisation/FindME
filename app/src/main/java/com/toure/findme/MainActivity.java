@@ -1,13 +1,16 @@
 package com.toure.findme;
 
+import android.Manifest;
 import android.app.Dialog;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -26,7 +29,6 @@ import java.text.DateFormat;
 import java.util.Date;
 
 
-
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
@@ -36,6 +38,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     // Request code to use when launching the resolution activity
     private static final int REQUEST_RESOLVE_ERROR = 1001;
+
+    // Code used to to request for permissions
+    public static final int REQUEST_PERMISSION_CODE = 1000;
 
     // Unique tag for the error dialog fragment
     private static final String DIALOG_ERROR = "dialog_error";
@@ -60,12 +65,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     //Broadcast receiver for location change
     BroadcastReceiver locRecievr;
+
+    boolean permissionAlreadyAskedOnM; // Use to keep track if the permission has already been asked to use GPS
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-
-
 
         //Get the state of error resolving tracker
         mResolvingError = (savedInstanceState != null
@@ -114,60 +120,40 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void onConnected(Bundle bundle) {
         Log.d(LOG_TAG, "the API Client is connected");
 
-        LocationAvailability la = LocationServices.FusedLocationApi.getLocationAvailability(mGoogleApiClient);
-        Log.d(LOG_TAG, Boolean.toString(la.isLocationAvailable()));
-        Log.d(LOG_TAG, la.toString());
-
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
-        if (mLastLocation != null) {
-            try{
-                MF = (MainActivityFragment) getSupportFragmentManager().findFragmentById(R.id.locationFragment);
-
-                MF.setLocation(mLastLocation);
-                MF.updateUI();
-                Log.d(LOG_TAG, "new location:  " + Integer.toString(++cnt) + " times");
-
-            }
-            catch(NullPointerException e){
-                Log.d(LOG_TAG, "Null pointer exception1:  " + e.getMessage()+
-                        "frag: " + MF.toString());
-
-                e.getStackTrace();
-            }
-
-
-        }
         //Request for location updates
-
         startLocationUpdates();
-
     }
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.d(LOG_TAG, " the API Client connection failed");
 
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        if (mResolvingError) {
-            // Already attempting to resolve an error.
-            return;
-        }
-        else if (connectionResult.hasResolution()){
-            mResolvingError = true;
-            try {
-                connectionResult.startResolutionForResult(this, REQUEST_RESOLVE_ERROR);
-            } catch (IntentSender.SendIntentException e) {
-                // There was an error with the resolution intent. Try again.
-                mGoogleApiClient.connect();
-                e.printStackTrace();
+        final int errorCode = connectionResult.getErrorCode();
+        try {
+            if (errorCode == ConnectionResult.SERVICE_MISSING) {
+                // No google play service available
+                Log.d(LOG_TAG, "onConnectionFail: SERVICE MISSING");
+            } else if (errorCode == ConnectionResult.SERVICE_DISABLED) {
+                Log.d(LOG_TAG, "onConnectionFail: SERVICE_DISABLED");
+            } else if (errorCode == ConnectionResult.SERVICE_INVALID) {
+                Log.d(LOG_TAG, "onConnectionFail: SERVICE_INVALID");
+            } else if (errorCode == ConnectionResult.SERVICE_MISSING_PERMISSION) {
+                Log.d(LOG_TAG, "onConnectionFail: SERVICE_MISSING_PERMISSION");
+            } else if (errorCode == ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED) {
+                Log.d(LOG_TAG, "onConnectionFail: SERVICE_VERSION_UPDATE_REQUIRED");
+            } else if (errorCode == ConnectionResult.SERVICE_UPDATING) {
+                Log.d(LOG_TAG, "onConnectionFail: SERVICE_UPDATING");
             }
-        }
-        else{
-            // Show dialog using GooglePlayServicesUtil.getErrorDialog()
-            showErrorDialog(connectionResult.getErrorCode());
-            mResolvingError = true;
 
+            if (!mResolvingError) {
+                if (connectionResult.hasResolution()) {
+                    mResolvingError = true;
+                    connectionResult.startResolutionForResult(this, REQUEST_RESOLVE_ERROR);
+                }
+            }
+
+        } catch (IntentSender.SendIntentException e) {
+            e.printStackTrace();
         }
 
     }
@@ -181,58 +167,26 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
 
-        int errorCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-
-
-        if(errorCode != ConnectionResult.SUCCESS){
-            Dialog errorDialog =  GooglePlayServicesUtil.getErrorDialog(errorCode, this, REQUEST_RESOLVE_ERROR,
-                    new DialogInterface.OnCancelListener() {
-                        @Override
-                        public void onCancel(DialogInterface dialog) {
-                            // Leave if services are unavailable
-                            finish();
-                        }
-                    });
-
-            errorDialog.show();
-        }
-
-        if (mGoogleApiClient.isConnected()) {
-            startLocationUpdates();
-        }
-
-    }
 
     @Override
     protected void onStart() {
         super.onStart();
-        //Check if the device has the Google play Service APK install
-        //It's only if this is available that we can connect the API client
 
-        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-        if(resultCode == ConnectionResult.SUCCESS){
-            //Here, we are sure that th device has the Google play Service APK
-            if (!mResolvingError) {
-                Log.d(LOG_TAG," API Client connecting");
-                mGoogleApiClient.connect();
+        if (!mResolvingError) {
+            Log.d(LOG_TAG, " API Client connecting");
+            mGoogleApiClient.connect();
 
-            }
-        }
-        else{
-            //Get the error dialog and prompt the user for solving the corresponding error
-            GooglePlayServicesUtil.getErrorDialog(resultCode, this, REQUEST_RESOLVE_ERROR).show();
         }
 
     }
 
     @Override
     protected void onStop() {
-        mGoogleApiClient.disconnect(); //disconnect the google play services before closing the app
-        Log.d(LOG_TAG, " API Client disconnected");
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.disconnect(); //disconnect the google play services before closing the app
+            Log.d(LOG_TAG, " API Client disconnected");
+        }
         super.onStop();
 
     }
@@ -255,7 +209,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     /* A fragment to display an error dialog */
     public static class ErrorDialogFragment extends DialogFragment {
-        public ErrorDialogFragment() { }
+        public ErrorDialogFragment() {
+        }
 
         @Override
         public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -267,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         public void onDismiss(DialogInterface dialog) {
-            ((MainActivity)getActivity()).onDialogDismissed();
+            ((MainActivity) getActivity()).onDialogDismissed();
         }
     }
 
@@ -296,16 +251,34 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     protected void createLocationRequest() {
         mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000); // 10 secs
-        mLocationRequest.setFastestInterval(5000); // 5 secs
+        mLocationRequest.setInterval(5000); // 5 secs
+        mLocationRequest.setFastestInterval(2000); // 2 secs
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
     protected void startLocationUpdates() {
+        Log.d(LOG_TAG, "startLocationUpdates");
         createLocationRequest();
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+
+            String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
+            if (!permissionAlreadyAskedOnM)
+                ActivityCompat.requestPermissions(this, permissions, REQUEST_PERMISSION_CODE);
+
+            return;
+        }
+
+        Log.d(LOG_TAG, "request location update");
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, mLocationRequest, this);
 
+        LocationAvailability la = LocationServices.FusedLocationApi.getLocationAvailability(mGoogleApiClient);
+        Log.d(LOG_TAG, Boolean.toString(la.isLocationAvailable()));
+        Log.d(LOG_TAG, la.toString());
+
+/*
         LocationUpdateReciever locReciever = new LocationUpdateReciever(MF);
 
         Intent intent = new Intent(this, LocationService.class);
@@ -313,7 +286,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         PendingIntent pi = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,
-                mLocationRequest, pi);
+                mLocationRequest, pi);*/
     }
 
     @Override
@@ -337,13 +310,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
 
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopLocationUpdates();
-    }
-
     protected void stopLocationUpdates() {
         if(mGoogleApiClient.isConnected()) {
             LocationServices.FusedLocationApi.removeLocationUpdates(
@@ -354,5 +320,46 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     //Getter method for the API Client
     public GoogleApiClient getApiClient(){
         return mGoogleApiClient;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_PERMISSION_CODE) {
+            permissionAlreadyAskedOnM = true;
+            boolean permissionState = true;
+
+            if (permissions.length > 0) {
+                for (int i = 0; i < permissions.length; i++) {
+
+                    permissionState = permissionState && (grantResults[i] == PackageManager.PERMISSION_GRANTED);
+                }
+            } else {
+                permissionState = false;
+            }
+            Log.d(LOG_TAG, Boolean.toString(permissionState));
+            if (permissionState) {
+                // user has given permission to access location data
+                Log.d(LOG_TAG, " User has accepted the permission to access location data");
+                startLocationUpdates();
+            } else {
+                // User has rejected the permission to access location data
+                Log.d(LOG_TAG, " User has rejected the permission to access location data");
+                android.support.v7.app.AlertDialog.Builder builder = new android.support.v7.app.AlertDialog.Builder(this);
+                builder.setTitle(getString(R.string.permission_required_title))
+                        .setMessage(getString(R.string.permission_required_msg))
+                        .setCancelable(false)
+                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.cancel();
+                                finish(); // close the app
+                            }
+                        });
+
+                builder.show();
+            }
+        }
     }
 }

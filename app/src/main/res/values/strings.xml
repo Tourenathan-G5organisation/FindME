@@ -11,4 +11,8 @@
     <string name="title_activity_main_activity2">MainActivity2Activity</string>
     <string name="hello_world">Hello world!</string>
 
+    <string name="permission_required_title">Permission required</string>
+    <string name="permission_required_msg" translatable="true">This application is used to get the user location. So, can\'t work without permission
+    </string>
+
 </resources>
