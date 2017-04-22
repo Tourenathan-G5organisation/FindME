@@ -20,10 +20,16 @@ import android.view.MenuItem;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResult;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -41,6 +47,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     // Code used to to request for permissions
     public static final int REQUEST_PERMISSION_CODE = 1000;
+
+    private static final int REQUEST_CHECK_LOCATION_SETTINGS = 1004;
 
     // Unique tag for the error dialog fragment
     private static final String DIALOG_ERROR = "dialog_error";
@@ -240,6 +248,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
             }
         }
+        if (requestCode == REQUEST_CHECK_LOCATION_SETTINGS) {
+            if (resultCode == RESULT_OK) {
+                if (mGoogleApiClient.isConnected()) {
+                    Log.d(LOG_TAG, "request location update");
+                    startLocationUpdates();
+                }
+            }
+        }
 
     }
 
@@ -277,6 +293,45 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         LocationAvailability la = LocationServices.FusedLocationApi.getLocationAvailability(mGoogleApiClient);
         Log.d(LOG_TAG, Boolean.toString(la.isLocationAvailable()));
         Log.d(LOG_TAG, la.toString());
+
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .setAlwaysShow(true)
+                .addLocationRequest(mLocationRequest);
+
+        PendingResult<LocationSettingsResult> result =
+                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,
+                        builder.build());
+
+        result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
+            @Override
+            public void onResult(@NonNull LocationSettingsResult locationSettingsResult) {
+                final Status status = locationSettingsResult.getStatus();
+
+                switch (status.getStatusCode()) {
+                    case LocationSettingsStatusCodes.SUCCESS:
+                        Log.d(LOG_TAG, " GPS is  activated");
+                        break;
+
+                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                        // Location settings are not satisfied, but this can be fixed
+                        // by showing the user a dialog.
+                        try {
+                            // Show the dialog by calling startResolutionForResult(),
+                            // and check the result in onActivityResult().
+                            status.startResolutionForResult(MainActivity.this, REQUEST_CHECK_LOCATION_SETTINGS);
+                        } catch (IntentSender.SendIntentException e) {
+                            // Ignore the error.
+                        }
+                        break;
+
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        // Location settings are not satisfied. However, we have no way
+                        // to fix the settings so we won't show the dialog.
+                        Log.d(LOG_TAG, "LOCATION SETTINGS_CHANGE_UNAVAILABLE");
+                        break;
+                }
+            }
+        });
 
 /*
         LocationUpdateReciever locReciever = new LocationUpdateReciever(MF);
