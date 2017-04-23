@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     @Override
     protected void onStop() {
-        if (mGoogleApiClient != null) {
+        if (mGoogleApiClient != null && (mGoogleApiClient.isConnected() || mGoogleApiClient.isConnecting())) {
             mGoogleApiClient.disconnect(); //disconnect the google play services before closing the app
             Log.d(LOG_TAG, " API Client disconnected");
         }
