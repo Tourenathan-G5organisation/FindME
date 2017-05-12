@@ -15,4 +15,18 @@
     <string name="permission_required_msg" translatable="true">This application is used to get the user location. So, can\'t work without permission
     </string>
 
+    <string name="accuracy">Accuracy: %1$d</string>
+    <string name="current_activity">You are currently %s</string>
+
+    <string name="in_vehicle">in a vehicle</string>
+    <string name="on_bicycle">on a bicycle</string>
+    <string name="on_foot">on foot</string>
+    <string name="running">Running</string>
+    <string name="still">Still</string>
+    <string name="tilting">Tilting</string>
+    <string name="unknown">Unknown Activity</string>
+    <string name="walking">Walking</string>
+    <string name="unidentifiable_activity">Unidentifiable activity: %1$d</string>
+    <string name="not_connected">GoogleApiClient not yet connected. Try again later</string>
+
 </resources>

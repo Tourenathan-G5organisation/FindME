@@ -30,6 +30,7 @@ public class MainActivityFragment extends Fragment {
     TextView lon;
     TextView alt;
     TextView time;
+    TextView userActivity;
 
     //Key to keep the location object when this fragment is recreated from a save state
     private static final String LOCATION_KEY = "location_key";
@@ -58,6 +59,7 @@ public class MainActivityFragment extends Fragment {
         lon = (TextView) rootView.findViewById(R.id.longitude);
         alt = (TextView) rootView.findViewById(R.id.altitude);
         time = (TextView) rootView.findViewById(R.id.time);
+        userActivity = (TextView) rootView.findViewById(R.id.current_user_activity);
 
         return rootView;
     }
@@ -89,6 +91,16 @@ public class MainActivityFragment extends Fragment {
 
     public void setLocation(Location location) {
         mLastLocation = location;
+    }
+
+    /**
+     * Set the device detected activity to the user
+     *
+     * @param text
+     */
+    public void setUserActivity(String text) {
+
+        userActivity.setText(text);
     }
 
     @Override

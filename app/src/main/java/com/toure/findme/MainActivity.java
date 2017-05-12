@@ -1,28 +1,31 @@
 package com.toure.findme;
 
 import android.Manifest;
-import android.app.Dialog;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.DialogFragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.ActivityRecognition;
+import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
@@ -32,11 +35,12 @@ import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, LocationListener {
+        GoogleApiClient.OnConnectionFailedListener, LocationListener, ResultCallback<Status> {
 
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
 
@@ -76,20 +80,24 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     boolean permissionAlreadyAskedOnM; // Use to keep track if the permission has already been asked to use GPS
 
+    protected ActivityDetectionBroadcastReceiver mActivityDetectedBroadcastReceiver;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
         //Get the state of error resolving tracker
         mResolvingError = (savedInstanceState != null
                 && savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false));
 
+        mActivityDetectedBroadcastReceiver = new ActivityDetectionBroadcastReceiver();
         //Create the Google ApiClient instance service
         buildGoogleApiClient();
         Log.d(LOG_TAG, "Initialised the API Client");
 
-        setContentView(R.layout.activity_main);
+
     }
 
 
@@ -121,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .addApi(LocationServices.API)
+                .addApi(ActivityRecognition.API)
                 .build();
     }
 
@@ -169,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     public void onConnectionSuspended(int i) {
         Log.d(LOG_TAG, " API Client connection suspended");
+        mGoogleApiClient.connect();
         // The connection has been interrupted.
         // Disable any UI components that depend on Google APIs
         // until onConnected() is called.
@@ -190,6 +200,27 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(this).registerReceiver(mActivityDetectedBroadcastReceiver,
+                new IntentFilter(Constants.BROADCAST_ACTION));
+
+        // Request the device to detect activities
+        requestActivityUpdates();
+    }
+
+    @Override
+    protected void onPause() {
+        // Unregister the broadcast receiver that was registered during onResume
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mActivityDetectedBroadcastReceiver);
+
+        // Stop the request of activities detection by the device
+        removeActivityUpdates();
+        super.onPause();
+
+    }
+
+    @Override
     protected void onStop() {
         if (mGoogleApiClient != null && (mGoogleApiClient.isConnected() || mGoogleApiClient.isConnecting())) {
             mGoogleApiClient.disconnect(); //disconnect the google play services before closing the app
@@ -199,40 +230,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     }
 
-    /* Creates a dialog for an error message */
-    private void showErrorDialog(int errorCode) {
-        // Create a fragment for the error dialog
-        ErrorDialogFragment dialogFragment = new ErrorDialogFragment();
-        // Pass the error that should be displayed
-        Bundle args = new Bundle();
-        args.putInt(DIALOG_ERROR, errorCode);
-        dialogFragment.setArguments(args);
-        dialogFragment.show(getSupportFragmentManager(), "errordialog");
-    }
-
-    /* Called from ErrorDialogFragment when the dialog is dismissed. */
-    public void onDialogDismissed() {
-        mResolvingError = false;
-    }
-
-    /* A fragment to display an error dialog */
-    public static class ErrorDialogFragment extends DialogFragment {
-        public ErrorDialogFragment() {
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            // Get the error code and retrieve the appropriate dialog
-            int errorCode = this.getArguments().getInt(DIALOG_ERROR);
-            return GooglePlayServicesUtil.getErrorDialog(errorCode,
-                    this.getActivity(), REQUEST_RESOLVE_ERROR);
-        }
-
-        @Override
-        public void onDismiss(DialogInterface dialog) {
-            ((MainActivity) getActivity()).onDialogDismissed();
-        }
-    }
 
     //This method is called after a GoogleAPi connection  problem is solved
     @Override
@@ -417,4 +414,68 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
     }
+
+
+    /**
+     * This method is used to launch the request to detected the user current activity
+     */
+    public void requestActivityUpdates() {
+        if (!mGoogleApiClient.isConnected()) {
+            return;
+        }
+        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient,
+                Constants.DETECTION_INTERVAL_IN_MILLISECONDS,
+                getActivityDetectionPendingIntent())
+                .setResultCallback(this);
+    }
+
+    /**
+     * This method is used to stop the detection of activity
+     */
+    public void removeActivityUpdates() {
+        if (!mGoogleApiClient.isConnected()) {
+            return;
+        }
+
+        // Remove the activity updates for all the pending intents that was used to request it.
+        ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient,
+                getActivityDetectionPendingIntent())
+                .setResultCallback(this);
+    }
+
+    @Override
+    public void onResult(@NonNull Status status) {
+        if (status.isSuccess()) {
+            Log.e(LOG_TAG, "Successfully added or remove activity detection");
+        } else {
+            Log.e(LOG_TAG, "Error adding or removing activity detection" + status.getStatusMessage());
+        }
+    }
+
+    private PendingIntent getActivityDetectionPendingIntent() {
+        Intent intent = new Intent(this, DetectedActivitiesIntentService.class);
+        return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    public class ActivityDetectionBroadcastReceiver extends BroadcastReceiver {
+
+        protected final String TAG = ActivityDetectionBroadcastReceiver.class.getSimpleName();
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            ArrayList<DetectedActivity> detectedActivities = intent.getParcelableArrayListExtra(Constants.ACTIVITY_EXTRA);
+            int[] bestOption = Constants.getbestProbableActivityType(detectedActivities);
+            if (MF == null) {
+                MF = (MainActivityFragment) getSupportFragmentManager().findFragmentById(R.id.locationFragment);
+            }
+            MF.setUserActivity(Constants.getActivityString(getApplicationContext(), bestOption[0]) + "\n" + String.format(getString(R.string.accuracy), bestOption[1]) + "%");
+            for (DetectedActivity da : detectedActivities) {
+                Log.i(TAG,
+                        Constants.getActivityString(getApplicationContext(), da.getType()) + " " + da.getConfidence() + "%");
+            }
+        }
+    }
+
+
 }

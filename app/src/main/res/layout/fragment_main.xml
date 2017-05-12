@@ -40,7 +40,7 @@
             android:id="@+id/latitude"
             android:layout_weight=".5"
             android:gravity="center" />
-        </LinearLayout>
+    </LinearLayout>
 
 
 
@@ -66,7 +66,7 @@
             android:id="@+id/longitude"
             android:layout_weight=".5"
             android:gravity="center" />
-        </LinearLayout>
+    </LinearLayout>
 
 
     <LinearLayout
@@ -117,5 +117,23 @@
             android:gravity="center"/>
 
     </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Detected Activity"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textAlignment="center"
+        android:textColor="@color/blue_grey_40"
+        android:layout_marginTop="10dp" />
+
+    <TextView
+        android:id="@+id/current_user_activity"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/black"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_marginTop="10dp" />
+
 
 </LinearLayout>
