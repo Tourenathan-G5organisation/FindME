@@ -204,7 +204,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(mActivityDetectedBroadcastReceiver,
                 new IntentFilter(Constants.BROADCAST_ACTION));
-
+        Log.d(LOG_TAG, "Broadcast rgistered");
         // Request the device to detect activities
         requestActivityUpdates();
     }
@@ -213,9 +213,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     protected void onPause() {
         // Unregister the broadcast receiver that was registered during onResume
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mActivityDetectedBroadcastReceiver);
+        Log.d(LOG_TAG, "Broadcast unrgistered");
 
-        // Stop the request of activities detection by the device
-        removeActivityUpdates();
         super.onPause();
 
     }
@@ -226,6 +225,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             mGoogleApiClient.disconnect(); //disconnect the google play services before closing the app
             Log.d(LOG_TAG, " API Client disconnected");
         }
+
+        // Stop the request of activities detection by the device
+        removeActivityUpdates();
+        Log.d(LOG_TAG, " removed activiti update");
         super.onStop();
 
     }
